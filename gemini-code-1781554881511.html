@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>フローティングパレット VBA - ドキュメント</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            /* 奥行きを感じさせるメッシュグラデーション背景 */
+            background-color: #0f0c29;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(75, 26, 150, 0.4), transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(56, 143, 222, 0.4), transparent 50%),
+                radial-gradient(circle at 50% 80%, rgba(45, 185, 150, 0.3), transparent 50%);
+            background-attachment: fixed;
+            color: #ffffff;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        /* グラスモーフィズムの基本スタイル（使い回し用） */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .toolbar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 0.7rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        
+        .btn-primary {
+            background: rgba(63, 185, 80, 0.2);
+            color: #ffffff;
+            border: 1px solid rgba(63, 185, 80, 0.4);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary:hover {
+            background: rgba(63, 185, 80, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .btn-tab {
+            background: rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .btn-tab.active {
+            background: rgba(126, 200, 245, 0.15);
+            color: #ffffff;
+            border: 1px solid rgba(126, 200, 245, 0.3);
+            box-shadow: 0 0 15px rgba(126, 200, 245, 0.2);
+        }
+        
+        .btn-tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+        
+        .btn-action {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn-action:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+        }
+        
+        .btn-action.copied {
+            background: rgba(63, 185, 80, 0.3);
+            color: #ffffff;
+            border-color: rgba(63, 185, 80, 0.6);
+        }
+        
+        .tabs-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .code-block {
+            overflow: hidden;
+            margin-bottom: 2rem;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .code-block.active {
+            display: block;
+            opacity: 1;
+        }
+        
+        .code-header {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .code-header h3 {
+            color: #ffffff;
+            font-size: 1.1rem;
+            margin: 0;
+            font-weight: 500;
+        }
+        
+        .code-header .badge {
+            display: inline-block;
+            padding: 0.3rem 0.7rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            border: 1px solid;
+            margin-left: 10px;
+        }
+        
+        .badge-module { background: rgba(63, 185, 80, 0.1); color: #7ee787; border-color: rgba(63, 185, 80, 0.3); }
+        .badge-form { background: rgba(126, 200, 245, 0.1); color: #7ec8f5; border-color: rgba(126, 200, 245, 0.3); }
+        .badge-doc { background: rgba(255, 166, 87, 0.1); color: #ffa657; border-color: rgba(255, 166, 87, 0.3); }
+        
+        .code-body {
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+            /* highlight.js の背景を透明にしてグラスに馴染ませる */
+        }
+        
+        .code-body pre {
+            margin: 0;
+            padding: 1.5rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            background: transparent !important; 
+        }
+        
+        .code-body pre code.hljs {
+            background: transparent !important;
+        }
+        
+        .section {
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .section h2 {
+            color: #ffffff;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .section h3 {
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 1.5rem;
+            margin-bottom: 0.8rem;
+            font-size: 1.1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.3rem;
+        }
+        
+        .section p {
+            margin-bottom: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .section ul, .section ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .section li {
+            margin-bottom: 0.5rem;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-bottom: 1.5rem;
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        table th, table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        table th {
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            font-weight: 600;
+        }
+        
+        table tr:hover td {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            color: #7ec8f5;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .note {
+            background: rgba(255, 166, 87, 0.05);
+            border-left: 4px solid #ffa657;
+            padding: 1.2rem;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 1.5rem;
+        }
+        
+        .step {
+            background: rgba(63, 185, 80, 0.05);
+            border-left: 4px solid #3fb950;
+            padding: 1.2rem;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 1.5rem;
+        }
+        
+        footer {
+            text-align: center;
+            padding-top: 2rem;
+            margin-top: 3rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8rem; }
+            .container { padding: 1rem; }
+            .code-body { max-height: 300px; }
+            .toolbar { flex-direction: column; }
+            button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="glass-panel">
+            <h1>🎨 フローティングパレット VBA</h1>
+            <p class="subtitle">Excelで好きな場所にカスタムツールバーを表示</p>
+        </header>
+        
+        <div class="toolbar">
+            <button class="btn-primary" onclick="downloadAll()">📥 全ファイルを保存</button>
+        </div>
+        
+        <div class="tabs-container">
+            <button class="btn-tab active" onclick="switchTab(0, this)">📄 FloatingPalette.bas</button>
+            <button class="btn-tab" onclick="switchTab(1, this)">🖼️ frmPalette_Code.bas</button>
+            <button class="btn-tab" onclick="switchTab(2, this)">📖 導入手順</button>
+        </div>
+        
+        <div class="code-block glass-panel active" id="tab-0">
+            <div class="code-header">
+                <div>
+                    <h3>FloatingPalette.bas <span class="badge badge-module">標準モジュール</span></h3>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn-action" onclick="copyCode(0)">📋 コピー</button>
+                    <button class="btn-action" onclick="downloadFile(0)">💾 保存</button>
+                </div>
+            </div>
+            <div class="code-body">
+                <pre><code class="language-vba" id="code-0"></code></pre>
+            </div>
+        </div>
+        
+        <div class="code-block glass-panel" id="tab-1">
+            <div class="code-header">
+                <div>
+                    <h3>frmPalette_Code.bas <span class="badge badge-form">UserForm</span></h3>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn-action" onclick="copyCode(1)">📋 コピー</button>
+                    <button class="btn-action" onclick="downloadFile(1)">💾 保存</button>
+                </div>
+            </div>
+            <div class="code-body">
+                <pre><code class="language-vba" id="code-1"></code></pre>
+            </div>
+        </div>
+        
+        <div class="code-block glass-panel" id="tab-2">
+            <div class="code-header">
+                <div>
+                    <h3>導入手順とドキュメント <span class="badge badge-doc">ドキュメント</span></h3>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn-action" onclick="copyCode(2)">📋 コピー</button>
+                    <button class="btn-action" onclick="downloadFile(2)">💾 保存</button>
+                </div>
+            </div>
+            <div class="code-body" style="max-height: none;">
+                <div id="code-2" style="padding: 1.5rem;"></div>
+            </div>
+        </div>
+        
+        <section class="section glass-panel">
+            <h2>📋 ファイル構成</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ファイル名</th>
+                        <th>内容</th>
+                        <th>用途</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>FloatingPalette.bas</code></td>
+                        <td>標準モジュール</td>
+                        <td>アクション・設定読み込み</td>
+                    </tr>
+                    <tr>
+                        <td><code>frmPalette_Code.bas</code></td>
+                        <td>UserForm コード</td>
+                        <td>パレットのUI・動作</td>
+                    </tr>
+                    <tr>
+                        <td><code>FloatingPalette_Guide.html</code></td>
+                        <td>このファイル</td>
+                        <td>導入ガイド・リファレンス</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        
+        <section class="section glass-panel">
+            <h2>⚙️ 導入手順（4ステップ）</h2>
+            
+            <div class="step">
+                <strong>STEP 1：標準モジュールのインポート</strong>
+                <ol style="margin-top:0.5rem;">
+                    <li>Excelで対象ブックを開く</li>
+                    <li><code>Alt + F11</code> → VBEを開く</li>
+                    <li>メニュー「ファイル」→「ファイルのインポート」</li>
+                    <li><code>FloatingPalette.bas</code> を選択してインポート</li>
+                </ol>
+            </div>
+            
+            <div class="step">
+                <strong>STEP 2：UserForm の作成</strong>
+                <ol style="margin-top:0.5rem;">
+                    <li>VBE のメニュー「挿入」→「ユーザーフォーム」</li>
+                    <li>追加されたフォームを右クリック → プロパティ</li>
+                    <li><strong>Name を <code>frmPalette</code> に変更（重要！）</strong></li>
+                    <li>フォームをダブルクリックしてコードウィンドウを開く</li>
+                    <li><code>frmPalette_Code.bas</code> の中身をすべてコピー&ペースト</li>
+                </ol>
+            </div>
+            
+            <div class="step">
+                <strong>STEP 3：ショートカットキーの設定</strong>
+                <ol style="margin-top:0.5rem;">
+                    <li>Excelに戻る（<code>Alt + F4</code> で VBE を閉じる）</li>
+                    <li>「開発」タブ → 「マクロ」→ <code>ShowPalette</code> を選択</li>
+                    <li>「オプション」→ ショートカットキーを設定（例：<code>Ctrl + Shift + P</code>）</li>
+                </ol>
+            </div>
+            
+            <div class="step">
+                <strong>STEP 4：設定シートの作成（任意）</strong>
+                <ol style="margin-top:0.5rem;">
+                    <li><code>Alt + F8</code> → <code>CreateSettingSheet</code> を実行</li>
+                    <li>「設定」シートが自動生成される</li>
+                    <li>ボタンのラベル・アクション・パラメータをカスタマイズ可能</li>
+                </ol>
+            </div>
+        </section>
+        
+        <section class="section glass-panel">
+            <h2>🎯 アクション一覧</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>アクション名</th>
+                        <th>機能</th>
+                        <th>パラメータ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>InsertText</code></td>
+                        <td>アクティブセルにテキスト挿入</td>
+                        <td>固定テキスト（省略可）</td>
+                    </tr>
+                    <tr>
+                        <td><code>FontSize</code></td>
+                        <td>選択範囲のフォントサイズ変更</td>
+                        <td>なし</td>
+                    </tr>
+                    <tr>
+                        <td><code>BgColor</code></td>
+                        <td>背景色を RGB 形式で変更</td>
+                        <td>なし</td>
+                    </tr>
+                    <tr>
+                        <td><code>FontColor</code></td>
+                        <td>文字色を RGB 形式で変更</td>
+                        <td>なし</td>
+                    </tr>
+                    <tr>
+                        <td><code>Camera</code></td>
+                        <td>選択範囲を図として貼り付け</td>
+                        <td>なし</td>
+                    </tr>
+                    <tr>
+                        <td><code>Print</code></td>
+                        <td>アクティブシートを印刷</td>
+                        <td>なし</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        
+        <section class="section glass-panel">
+            <h2>💡 設定シートについて</h2>
+            <p><code>CreateSettingSheet</code> を実行すると、以下の構成の「設定」シートが作成されます：</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>A列</th>
+                        <th>B列</th>
+                        <th>C列</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>ボタンラベル</strong></td>
+                        <td><strong>アクション</strong></td>
+                        <td><strong>パラメータ（任意）</strong></td>
+                    </tr>
+                    <tr>
+                        <td>📝 テキスト挿入</td>
+                        <td>InsertText</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>🔤 フォントサイズ</td>
+                        <td>FontSize</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" style="color: rgba(255,255,255,0.4); text-align: center;">以下、4～6行目も同様</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="note">
+                <strong style="color: #ffa657;">💡 ヒント：</strong> ボタン数は最大6個（2列×3行）です。設定シートを編集したら、パレットを閉じて再起動（<code>ShowPalette</code>）してください。
+            </div>
+        </section>
+        
+        <section class="section glass-panel">
+            <h2>🚀 自動起動（Excelを開くと同時にパレットが出現）</h2>
+            <p><code>ThisWorkbook</code> モジュールに以下を追加してください：</p>
+            <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow-x: auto;"><code class="language-vba">Private Sub Workbook_Open()
+    ShowPalette
+End Sub</code></pre>
+        </section>
+        
+        <section class="section glass-panel">
+            <h2>❓ よくある質問</h2>
+            
+            <h3>Q: ボタンが6個以上欲しい</h3>
+            <p>現在は 2×3（6個）固定です。3×3（9個）への拡張は可能ですので、ご相談ください。</p>
+            
+            <h3>Q: 色選択をもっと便利にしたい</h3>
+            <p>現在は RGB 入力形式です。Excel のカラーダイアログ連携も検討できます。</p>
+            
+            <h3>Q: Excel を閉じるとパレットも消える？</h3>
+            <p>はい。再度 <code>ShowPalette</code> マクロを実行してください。自動起動させるには STEP で紹介した <code>Workbook_Open</code> イベントを使いましょう。</p>
+            
+            <h3>Q: 操作方法は？</h3>
+            <p style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                <strong>タイトルバーをドラッグ</strong> → パレットを移動<br>
+                <strong>✕ ボタン</strong> → パレットを閉じる<br>
+                <strong>ショートカットキー</strong> → パレットを開く（設定後）
+            </p>
+        </section>
+        
+        <footer>
+            <p>フローティングパレット VBA © 2026 | Glassmorphism UI | ローカルHTML埋め込み可</p>
+        </footer>
+    </div>
+    
+    <script>
+        const files = [
+            {
+                name: 'FloatingPalette.bas',
+                ext: 'bas',
+                content: `Option Explicit
+
+'------ パレット表示 / 非表示 ------
+Public Sub ShowPalette()
+    If Not IsPaletteOpen() Then
+        frmPalette.Show vbModeless
+    Else
+        frmPalette.SetFocus
+    End If
+End Sub
+
+Public Sub HidePalette()
+    If IsPaletteOpen() Then Unload frmPalette
+End Sub
+
+Private Function IsPaletteOpen() As Boolean
+    Dim f As Object
+    For Each f In VBA.UserForms
+        If f.Name = "frmPalette" Then IsPaletteOpen = True: Exit Function
+    Next
+End Function
+
+'------ ボタンアクション ------
+
+' テキスト挿入
+Public Sub Action_InsertText(sText As String)
+    If ActiveCell Is Nothing Then Exit Sub
+    If sText = "" Then
+        Dim result As String
+        result = InputBox("挿入するテキストを入力してください", "テキスト挿入")
+        If result = "" Then Exit Sub
+        ActiveCell.Value = result
+    Else
+        ActiveCell.Value = sText
+    End If
+End Sub
+
+' フォントサイズ変更
+Public Sub Action_FontSize()
+    If Selection Is Nothing Then Exit Sub
+    Dim sz As String
+    sz = InputBox("フォントサイズを入力してください（例: 12）", "フォントサイズ", _
+                  Selection.Font.Size)
+    If sz = "" Then Exit Sub
+    If Not IsNumeric(sz) Then MsgBox "数値を入力してください": Exit Sub
+    Selection.Font.Size = CDbl(sz)
+End Sub
+
+' 背景色変更
+Public Sub Action_BgColor()
+    If Selection Is Nothing Then Exit Sub
+    Dim c As Long
+    c = PickColor(Selection.Interior.Color)
+    If c = -1 Then Exit Sub
+    Selection.Interior.Color = c
+End Sub
+
+' 文字色変更
+Public Sub Action_FontColor()
+    If Selection Is Nothing Then Exit Sub
+    Dim c As Long
+    c = PickColor(Selection.Font.Color)
+    If c = -1 Then Exit Sub
+    Selection.Font.Color = c
+End Sub
+
+' カメラ（選択範囲をリンク図として貼り付け）
+Public Sub Action_Camera()
+    If TypeName(Selection) <> "Range" Then
+        MsgBox "まずセル範囲を選択してください": Exit Sub
+    End If
+    Selection.CopyPicture Appearance:=xlScreen, Format:=xlPicture
+    Dim ws As Worksheet
+    Set ws = ActiveSheet
+    ws.Paste
+    MsgBox "選択範囲を図として貼り付けました。" & Chr(10) & _
+           "移動・リサイズしてご利用ください。", vbInformation, "カメラ"
+End Sub
+
+' 印刷
+Public Sub Action_Print()
+    ActiveSheet.PrintOut
+End Sub
+
+' カスタムアクション（設定シートから）
+Public Sub Action_Custom(sCmd As String)
+    On Error Resume Next
+    Application.CommandBars.ExecuteMso sCmd
+    If Err.Number <> 0 Then
+        Err.Clear
+        Application.CommandBars.FindControl(ID:=CInt(sCmd)).Execute
+    End If
+    On Error GoTo 0
+End Sub
+
+'------ カラーピッカー（ダイアログ代替）------
+Private Function PickColor(defaultColor As Long) As Long
+    On Error GoTo ErrHandler
+    Dim s As String
+    Dim r As Long, g As Long, b As Long
+    
+    r = (defaultColor Mod 256)
+    g = ((defaultColor \\ 256) Mod 256)
+    b = ((defaultColor \\ 65536) Mod 256)
+    
+    s = InputBox("RGB値を入力してください（カンマ区切り: R,G,B）" & Chr(10) & _
+                 "例: 255,0,0 = 赤 0,0,255 = 青", "色選択", r & "," & g & "," & b)
+    If s = "" Then PickColor = -1: Exit Function
+    
+    Dim parts() As String
+    parts = Split(s, ",")
+    If UBound(parts) < 2 Then MsgBox "入力形式が正しくありません": PickColor = -1: Exit Function
+    
+    PickColor = RGB(CLng(Trim(parts(0))), CLng(Trim(parts(1))), CLng(Trim(parts(2))))
+    Exit Function
+ErrHandler:
+    MsgBox "色の指定に問題があります。": PickColor = -1
+End Function
+
+'==============================================================
+' 設定シートからボタン情報を読み込む
+'==============================================================
+Public Function LoadButtonConfig() As Collection
+    Dim col As New Collection
+    Dim ws As Worksheet
+    
+    On Error Resume Next
+    Set ws = ThisWorkbook.Sheets("設定")
+    On Error GoTo 0
+    
+    ' 設定シートがなければデフォルト6ボタン
+    If ws Is Nothing Then
+        col.Add Array("📝 テキスト", "InsertText", "")
+        col.Add Array("🔤 フォントサイズ", "FontSize", "")
+        col.Add Array("🎨 背景色", "BgColor", "")
+        col.Add Array("🖊 文字色", "FontColor", "")
+        col.Add Array("📷 カメラ", "Camera", "")
+        col.Add Array("🖨 印刷", "Print", "")
+        Set LoadButtonConfig = col
+        Exit Function
+    End If
+    
+    ' 設定シートから読み込み（2行目以降）
+    Dim lastRow As Long
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    
+    If lastRow < 2 Then
+        col.Add Array("📝 テキスト", "InsertText", "")
+        col.Add Array("🔤 フォントサイズ", "FontSize", "")
+        col.Add Array("🎨 背景色", "BgColor", "")
+        col.Add Array("🖊 文字色", "FontColor", "")
+        col.Add Array("📷 カメラ", "Camera", "")
+        col.Add Array("🖨 印刷", "Print", "")
+        Set LoadButtonConfig = col
+        Exit Function
+    End If
+    
+    Dim i As Long
+    For i = 2 To lastRow
+        Dim lbl As String, act As String, prm As String
+        lbl = Trim(ws.Cells(i, 1).Value)
+        act = Trim(ws.Cells(i, 2).Value)
+        prm = Trim(ws.Cells(i, 3).Value)
+        If lbl <> "" And act <> "" Then
+            col.Add Array(lbl, act, prm)
+        End If
+    Next i
+    
+    Set LoadButtonConfig = col
+End Function
+
+'==============================================================
+' 設定シートを自動作成するユーティリティ
+'==============================================================
+Public Sub CreateSettingSheet()
+    Dim ws As Worksheet
+    On Error Resume Next
+    Set ws = ThisWorkbook.Sheets("設定")
+    On Error GoTo 0
+    
+    If Not ws Is Nothing Then
+        If MsgBox("「設定」シートは既に存在します。上書きしますか？", vbYesNo) = vbNo Then Exit Sub
+        Application.DisplayAlerts = False
+        ws.Delete
+        Application.DisplayAlerts = True
+    End If
+    
+    Set ws = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    ws.Name = "設定"
+    
+    ' ヘッダー
+    With ws
+        .Cells(1, 1).Value = "ボタンラベル"
+        .Cells(1, 2).Value = "アクション"
+        .Cells(1, 3).Value = "パラメータ（任意）"
+        .Range("A1:C1").Font.Bold = True
+        .Range("A1:C1").Interior.Color = RGB(70, 130, 180)
+        .Range("A1:C1").Font.Color = RGB(255, 255, 255)
+        
+        ' サンプルデータ
+        .Cells(2, 1).Value = "📝 テキスト挿入"
+        .Cells(2, 2).Value = "InsertText"
+        .Cells(2, 3).Value = ""
+        
+        .Cells(3, 1).Value = "🔤 フォントサイズ"
+        .Cells(3, 2).Value = "FontSize"
+        .Cells(3, 3).Value = ""
+        
+        .Cells(4, 1).Value = "🎨 背景色"
+        .Cells(4, 2).Value = "BgColor"
+        .Cells(4, 3).Value = ""
+        
+        .Cells(5, 1).Value = "🖊 文字色"
+        .Cells(5, 2).Value = "FontColor"
+        .Cells(5, 3).Value = ""
+        
+        .Cells(6, 1).Value = "📷 カメラ"
+        .Cells(6, 2).Value = "Camera"
+        .Cells(6, 3).Value = ""
+        
+        .Cells(7, 1).Value = "🖨 印刷"
+        .Cells(7, 2).Value = "Print"
+        .Cells(7, 3).Value = ""
+        
+        ' コメント欄
+        .Cells(9, 1).Value = "【アクション一覧】"
+        .Cells(9, 1).Font.Bold = True
+        .Cells(10, 1).Value = "InsertText"
+        .Cells(10, 2).Value = "テキスト挿入"
+        .Cells(11, 1).Value = "FontSize"
+        .Cells(11, 2).Value = "フォントサイズ変更"
+        .Cells(12, 1).Value = "BgColor"
+        .Cells(12, 2).Value = "背景色変更"
+        .Cells(13, 1).Value = "FontColor"
+        .Cells(13, 2).Value = "文字色変更"
+        .Cells(14, 1).Value = "Camera"
+        .Cells(14, 2).Value = "選択範囲を図として貼り付け"
+        .Cells(15, 1).Value = "Print"
+        .Cells(15, 2).Value = "印刷"
+        
+        .Columns("A:C").AutoFit
+    End With
+    
+    MsgBox "「設定」シートを作成しました。", vbInformation
+End Sub`
+            },
+            {
+                name: 'frmPalette_Code.bas',
+                ext: 'bas',
+                content: `Option Explicit
+
+'------ ドラッグ用変数 ------
+Private m_dragging As Boolean
+Private m_startX   As Single
+Private m_startY   As Single
+
+'------ ボタン配列 ------
+Private m_buttons(1 To 6) As MSForms.CommandButton
+Private m_config  As Collection
+
+'==============================================================
+' フォーム初期化
+'==============================================================
+Private Sub UserForm_Initialize()
+    '--- フォーム外観 ---
+    With Me
+        .Caption       = "🎨 パレット"
+        .Width         = 180
+        .Height        = 230
+        .BackColor     = RGB(40, 40, 50)
+        .BorderStyle   = fmBorderStyleSingle
+        .StartUpPosition = 0
+        .Left          = Application.Left + Application.Width - 210
+        .Top           = Application.Top + 60
+        .ShowModal     = False
+    End With
+
+    '--- 設定読み込み ---
+    Set m_config = LoadButtonConfig()
+
+    '--- タイトルバー代わりのラベル ------
+    Dim lbl As MSForms.Label
+    Set lbl = Me.Controls.Add("Forms.Label.1", "lblTitle")
+    With lbl
+        .Caption    = "≡  MyPalette"
+        .Left       = 0
+        .Top        = 0
+        .Width      = Me.Width - 10
+        .Height     = 22
+        .BackColor  = RGB(60, 60, 80)
+        .ForeColor  = RGB(220, 220, 255)
+        .Font.Bold  = True
+        .Font.Size  = 9
+        .TextAlign  = fmTextAlignCenter
+    End With
+
+    '--- ボタン配置 ---
+    BuildButtons
+
+    '--- 閉じるボタン ---
+    Dim btnClose As MSForms.CommandButton
+    Set btnClose = Me.Controls.Add("Forms.CommandButton.1", "btnClose")
+    With btnClose
+        .Caption   = "✕"
+        .Left      = Me.Width - 30
+        .Top       = 2
+        .Width     = 20
+        .Height    = 18
+        .BackColor = RGB(180, 60, 60)
+        .ForeColor = RGB(255, 255, 255)
+        .Font.Size = 8
+    End With
+End Sub
+
+'==============================================================
+' ボタン生成
+'==============================================================
+Private Sub BuildButtons()
+    Const BTN_W  As Integer = 72
+    Const BTN_H  As Integer = 52
+    Const PAD    As Integer = 6
+    Const TOP_OFF As Integer = 26
+    
+    Dim total As Integer
+    total = m_config.Count
+    If total > 6 Then total = 6
+    
+    For i = 1 To total
+        Dim info As Variant
+        info = m_config(i)
+        
+        Dim col As Integer, row As Integer
+        col = (i - 1) Mod 2
+        row = (i - 1) \\ 2
+        
+        Dim btn As MSForms.CommandButton
+        Set btn = Me.Controls.Add("Forms.CommandButton.1", "btn" & i)
+        With btn
+            .Caption   = info(0)
+            .Left      = PAD + col * (BTN_W + PAD)
+            .Top       = TOP_OFF + PAD + row * (BTN_H + PAD)
+            .Width     = BTN_W
+            .Height    = BTN_H
+            .BackColor = RGB(55, 55, 75)
+            .ForeColor = RGB(230, 230, 255)
+            .Font.Size = 9
+            .WordWrap  = True
+        End With
+        Set m_buttons(i) = btn
+    Next i
+    
+    Dim rows As Integer
+    rows = WorksheetFunction.RoundUp(total / 2, 0)
+    Me.Height = TOP_OFF + PAD + rows * (BTN_H + PAD) + PAD + 30
+End Sub
+
+'==============================================================
+' ドラッグ移動
+'==============================================================
+Private Sub lblTitle_MouseDown(ByVal Button As Integer, ByVal Shift As Integer, _
+                               ByVal X As Single, ByVal Y As Single)
+    If Button = 1 Then
+        m_dragging = True
+        m_startX = X
+        m_startY = Y
+    End If
+End Sub
+
+Private Sub lblTitle_MouseMove(ByVal Button As Integer, ByVal Shift As Integer, _
+                               ByVal X As Single, ByVal Y As Single)
+    If m_dragging Then
+        Me.Left = Me.Left + (X - m_startX)
+        Me.Top  = Me.Top  + (Y - m_startY)
+    End If
+End Sub
+
+Private Sub lblTitle_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, _
+                              ByVal X As Single, ByVal Y As Single)
+    m_dragging = False
+End Sub
+
+'==============================================================
+' ボタンクリック
+'==============================================================
+Private Sub btnClose_Click()
+    Unload Me
+End Sub
+
+Private Sub btn1_Click():  DispatchAction 1:  End Sub
+Private Sub btn2_Click():  DispatchAction 2:  End Sub
+Private Sub btn3_Click():  DispatchAction 3:  End Sub
+Private Sub btn4_Click():  DispatchAction 4:  End Sub
+Private Sub btn5_Click():  DispatchAction 5:  End Sub
+Private Sub btn6_Click():  DispatchAction 6:  End Sub
+
+Private Sub DispatchAction(idx As Integer)
+    If idx > m_config.Count Then Exit Sub
+    
+    Dim info As Variant
+    info = m_config(idx)
+    
+    Dim act As String, prm As String
+    act = info(1)
+    prm = info(2)
+    
+    Select Case act
+        Case "InsertText":  Action_InsertText prm
+        Case "FontSize":    Action_FontSize
+        Case "BgColor":     Action_BgColor
+        Case "FontColor":   Action_FontColor
+        Case "Camera":      Action_Camera
+        Case "Print":       Action_Print
+        Case Else:          Action_Custom act
+    End Select
+End Sub
+
+Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
+    Set m_config = Nothing
+End Sub`
+            },
+            {
+                name: 'FloatingPalette_Guide.md',
+                ext: 'md',
+                content: `# フローティングパレット VBA 導入ガイド
+
+## クイックスタート
+
+### STEP 1：モジュール・フォームをインポート
+1. Excelで \`Alt + F11\` → VBEを開く
+2. \`FloatingPalette.bas\` をインポート
+3. ユーザーフォームを追加 → 名前を \`frmPalette\` に変更
+4. フォームのコードウィンドウに \`frmPalette_Code.bas\` をペースト
+
+### STEP 2：ショートカット設定
+1. Excelに戻る
+2. 開発タブ → マクロ → ShowPalette を選択
+3. オプション → Ctrl+Shift+P など任意のキーを設定
+
+### STEP 3：設定シート作成（任意）
+\`Alt + F8\` → CreateSettingSheet を実行
+
+---
+
+## 機能概要
+
+- **フローティングパレット**：画面上に常に浮く、ドラッグで移動可能なツールバー
+- **2×3ボタングリッド**：最大6個のカスタムボタン
+- **ダーク配色**：シンプルで統一感のあるデザイン
+- **設定シート対応**：ボタンのラベル・アクション・パラメータをカスタマイズ
+
+---
+
+## ボタンアクション
+
+| アクション | 説明 |
+|----------|------|
+| InsertText | セルにテキストを挿入（固定テキスト対応） |
+| FontSize | フォントサイズ変更 |
+| BgColor | 背景色を RGB で変更 |
+| FontColor | 文字色を RGB で変更 |
+| Camera | 選択範囲を図として貼り付け |
+| Print | シートを印刷 |
+
+---
+
+## よくある質問
+
+**Q: パレットを自動起動したい** A: ThisWorkbook に以下を追加：
+\`\`\`vba
+Private Sub Workbook_Open()
+    ShowPalette
+End Sub
+\`\`\`
+
+**Q: ボタンを増やしたい** A: 現在は6個固定。コード内の \`Const BTN_MAX\` を変更して3×3対応も可能です。
+
+**Q: 色選択をGUIで選びたい** A: PickColor 関数を拡張して Excel のカラーダイアログを統合できます。`
+            }
+        ];
+        
+        // コードをハイライト表示
+        document.getElementById('code-0').textContent = files[0].content;
+        document.getElementById('code-1').textContent = files[1].content;
+        
+        // マークダウンをHTMLに変換して表示
+        const markdownToHtml = (md) => {
+            return md
+                .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\`([^\`]+)\`/g, '<code>$1</code>')
+                .replace(/^\- (.+)$/gm, '<li>$1</li>')
+                .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+                .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+                .replace(/^\| (.+) \|/gm, '<table><tr><td>$1</td></tr></table>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/^/gm, '<p>');
+        };
+        
+        document.getElementById('code-2').innerHTML = `
+            <div style="line-height: 1.8; color: rgba(255,255,255,0.9);">
+                <h3 style="color: #7ec8f5; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">🚀 クイックスタート</h3>
+                <ol style="margin-bottom: 1.5rem;">
+                    <li>Excel で <code>Alt + F11</code> → VBEを開く</li>
+                    <li><code>FloatingPalette.bas</code> をインポート</li>
+                    <li>ユーザーフォーム追加 → 名前を <code>frmPalette</code> に変更</li>
+                    <li><code>frmPalette_Code.bas</code> をフォームのコードウィンドウにペースト</li>
+                    <li>ショートカットキーを設定（開発タブ → マクロ → ShowPalette → オプション）</li>
+                    <li>設定シート作成：<code>Alt + F8</code> → <code>CreateSettingSheet</code></li>
+                </ol>
+                
+                <h3 style="color: #7ec8f5; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">📌 重要な点</h3>
+                <ul style="margin-left: 2rem; margin-bottom: 1.5rem;">
+                    <li>UserForm の名前は <strong>必ず <code>frmPalette</code></strong> にしてください</li>
+                    <li>フォームは <code>vbModeless</code> モードで表示されます（常に最前面）</li>
+                    <li>ボタンは最大6個（2列×3行）です</li>
+                    <li>設定シートを編集したら、パレットを閉じて再起動してください</li>
+                </ul>
+                
+                <h3 style="color: #7ec8f5; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">🎯 アクション一覧</h3>
+                <ul style="margin-left: 2rem; margin-bottom: 1.5rem;">
+                    <li><code>InsertText</code> - テキスト挿入（パラメータで固定テキスト指定可）</li>
+                    <li><code>FontSize</code> - フォントサイズ変更</li>
+                    <li><code>BgColor</code> - 背景色変更（RGB形式）</li>
+                    <li><code>FontColor</code> - 文字色変更（RGB形式）</li>
+                    <li><code>Camera</code> - 選択範囲を図として貼り付け</li>
+                    <li><code>Print</code> - シートを印刷</li>
+                </ul>
+                
+                <h3 style="color: #7ec8f5; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">💡 自動起動設定</h3>
+                <p><code>ThisWorkbook</code> モジュールに以下を追加すると、ファイルを開いた時に自動でパレットが表示されます：</p>
+                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow-x: auto;"><code>Private Sub Workbook_Open()
+    ShowPalette
+End Sub</code></pre>
+            </div>
+        `;
+        
+        // --- 欠落していたJavaScript関数の追加 ---
+        function switchTab(index, element) {
+            document.querySelectorAll('.btn-tab').forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+            document.querySelectorAll('.code-block').forEach(block => block.classList.remove('active'));
+            document.getElementById('tab-' + index).classList.add('active');
+        }
+
+        function copyCode(index) {
+            const content = index === 2 ? files[2].content : files[index].content;
+            navigator.clipboard.writeText(content).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ コピー済';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => console.error('コピー失敗:', err));
+        }
+
+        function downloadFile(index) {
+            const file = files[index];
+            const blob = new Blob([file.content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadAll() {
+            files.forEach((_, index) => {
+                setTimeout(() => downloadFile(index), index * 500);
+            });
+        }
+
+        // ハイライトJSを実行
+        hljs.highlightAll();
+    </script>
+</body>
+</html>
